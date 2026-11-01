@@ -65,12 +65,28 @@ function I18n.resolve(tag)
     return base[language] or "en", base[language] and "base_language" or "unsupported_language"
 end
 
+local function game_language()
+    local library = UE.find("/Script/Engine.Default__KismetInternationalizationLibrary")
+    if not library then return nil, "language_library_missing", "unavailable" end
+    local ok, value = pcall(function() return UE.unwrap(library:GetCurrentLanguage()) end)
+    if not ok then return nil, "language_call_failed", "unavailable" end
+    local return_type = type(value)
+    if return_type == "userdata" or return_type == "table" then
+        -- UE4SS exposes FString as an object, not a Lua string. Convert it here,
+        -- within the game-thread callback; tostring(value) would give a wrapper address.
+        local converted, text = pcall(function() return value:ToString() end)
+        if not converted then return nil, "language_string_conversion_failed", return_type end
+        value = text
+    end
+    if type(value) ~= "string" then return nil, "language_return_type_invalid", return_type end
+    if value:match("^%s*$") then return nil, "language_empty", return_type end
+    return value, nil, return_type
+end
+
 function I18n.text(key, language)
-    local requested, reason = language, nil
+    local requested, reason, return_type = language, nil, type(language)
     if language == nil or normalize(language) == "auto" then
-        local library = UE.find("/Script/Engine.Default__KismetInternationalizationLibrary")
-        requested = UE.call(library, "GetCurrentLanguage")
-        if type(requested) ~= "string" or requested:match("^%s*$") then reason = "language_query_failed" end
+        requested, reason, return_type = game_language()
     end
     local selected, match_reason = I18n.resolve(requested)
     local entry = I18n.messages[selected]
@@ -79,7 +95,7 @@ function I18n.text(key, language)
         message = I18n.messages.en[key] or "ZhanFX"
         reason = "missing_translation"
     end
-    return message, selected, type(requested) == "string" and requested or "unavailable", reason or match_reason
+    return message, selected, type(requested) == "string" and requested or "unavailable", reason or match_reason, return_type
 end
 
 return I18n

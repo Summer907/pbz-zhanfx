@@ -87,13 +87,66 @@ test("missing API does not stop enabling or disabling", function()
     local f = fixture(); f.objects["/Script/Engine.Default__KismetInternationalizationLibrary"] = nil
     eq(toggle(f), "ZhanFX enabled"); eq(f.app.presenter.armed.combat, true)
     eq(toggle(f), "ZhanFX disabled"); eq(f.app.config.Enabled, false)
+    local _, _, _, reason = I18n.text("enabled", "auto")
+    eq(reason, "language_library_missing")
 end)
 test("throwing API is isolated from the switch", function()
     local f = fixture()
     f.objects["/Script/Engine.Default__KismetInternationalizationLibrary"].GetCurrentLanguage = function() error("missing binding") end
     eq(toggle(f), "ZhanFX enabled"); eq(next(f.app.errors), nil)
     local message, _, _, reason = I18n.text("disabled", "auto")
-    eq(message, "ZhanFX disabled"); eq(reason, "language_query_failed")
+    eq(message, "ZhanFX disabled"); eq(reason, "language_call_failed")
+end)
+
+test("FString return is converted before language matching", function()
+    local f = fixture()
+    local conversions = 0
+    f.language = {ToString=function() conversions = conversions + 1; return "zh-Hans" end}
+    eq(toggle(f), "ZhanFX 已开启"); eq(toggle(f), "ZhanFX 已关闭")
+    eq(conversions, 2); eq(f.language_reads, 2)
+    local _, selected, requested, reason, return_type = I18n.text("enabled", "auto")
+    eq(selected, "zh-hans"); eq(requested, "zh-Hans"); eq(reason, "exact"); eq(return_type, "table")
+end)
+
+test("converted FString follows language changes and does not use tostring", function()
+    local f = fixture(); local tag = "zh-CN"
+    f.language = setmetatable({ToString=function() return tag end}, {__tostring=function() error("wrapper address is not a language") end})
+    eq(toggle(f), "ZhanFX 已开启")
+    tag = "zh-Hant"; eq(toggle(f), "ZhanFX 已關閉")
+    tag = "ja-JP"; eq(toggle(f), "ZhanFX 有効")
+end)
+
+test("FString conversion errors cannot stop the switch", function()
+    local f = fixture()
+    f.language = {ToString=function() error("conversion unavailable") end}
+    eq(toggle(f), "ZhanFX enabled"); eq(f.app.presenter.armed.combat, true)
+    eq(toggle(f), "ZhanFX disabled"); eq(next(f.app.errors), nil)
+    local _, _, _, reason, return_type = I18n.text("enabled", "auto")
+    eq(reason, "language_string_conversion_failed"); eq(return_type, "table")
+end)
+
+test("invalid and empty FString values have distinct failure reasons", function()
+    local f = fixture()
+    for _, value in ipairs({false, {}, 42}) do
+        f.language = {ToString=function() return value end}
+        local text, _, _, reason = I18n.text("enabled", "auto")
+        eq(text, "ZhanFX enabled"); eq(reason, "language_return_type_invalid")
+    end
+    f.language = {ToString=function() return " " end}
+    local _, _, _, reason = I18n.text("disabled", "auto")
+    eq(reason, "language_empty")
+end)
+
+test("RemoteUnrealParam containing FString is unwrapped and converted", function()
+    local f = fixture()
+    f.language = f:remote({ToString=function() return "zh-Hans-CN" end})
+    eq(toggle(f), "ZhanFX 已开启")
+end)
+
+test("manual override never invokes FString conversion", function()
+    local f = fixture(); f.app.config.Language = "zh-Hant"
+    f.language = {ToString=function() error("must not be queried") end}
+    eq(toggle(f), "ZhanFX 已開啟"); eq(f.language_reads, 0)
 end)
 test("invalid engine return and unsupported game language fall back", function()
     local f = fixture()

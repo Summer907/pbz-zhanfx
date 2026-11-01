@@ -266,8 +266,8 @@ function Runtime:inspect_damage()
     end
 end
 function Runtime:show_notice(context, key)
-    local text, language, requested, reason = I18n.text(key, self.config.Language)
-    self:log("notice_language", { language = language, requested = requested, reason = reason })
+    local text, language, requested, reason, return_type = I18n.text(key, self.config.Language)
+    self:log("notice_language", { language = language, requested = requested, reason = reason, return_type = return_type })
     self.notice:show(context, text)
 end
 
