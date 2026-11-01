@@ -1,0 +1,45 @@
+{
+  "name": "ZhanFX",
+  "version": "0.1.0",
+  "game": "Phantom Blade Zero",
+  "steam_build": "26266538",
+  "file_version": "CL-301524_JKS-17219",
+  "ue4ss": "3.0.1-1188-gf885e8d2 / PBZ custom layouts and signatures",
+  "ue4ss_download": "https://www.nexusmods.com/phantombladezero/mods/13",
+  "toggle_hotkey": "Alt+F8",
+  "starts_enabled": false,
+  "categories": {
+    "combat": true,
+    "simple": false,
+    "stealth": false,
+    "air": false,
+    "shachi": false,
+    "grab": false
+  },
+  "i18n": {
+    "default": "auto",
+    "languages": [
+      "en",
+      "zh-Hans",
+      "zh-Hant",
+      "fr",
+      "de",
+      "es-ES",
+      "es-419",
+      "ru",
+      "ja",
+      "pt-BR",
+      "pt-PT",
+      "ko",
+      "it",
+      "th",
+      "vi"
+    ],
+    "fallback": "en"
+  },
+  "distribution": {
+    "loader_bundled": false,
+    "layout": "mod-only",
+    "activation": "enabled.txt"
+  }
+}
